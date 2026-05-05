@@ -1,0 +1,18 @@
+{
+  "nodeId": "nodeA",
+  "interface": {
+    "publicKey": "aaa",
+    "privateKey": "paaa",
+    "address": "10.0.0.1/24",
+    "listenPort": 51820
+  },
+  "peers": [],
+  "extField": {
+    "mtu": 1420,
+    "dns": ["8.8.8.8", "1.1.1.1"],
+    "persistentKeepalive": 25,
+    "allowedIPs": ["0.0.0.0/0", "::/0"],
+    "endpoint": "nodeA-public-ip:51820",
+    "apiEndpoint": "http://10.0.0.1:8080"
+  }
+}

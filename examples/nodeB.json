@@ -1,0 +1,9 @@
+{
+  "nodeId": "nodeB",
+  "interface": {
+    "publicKey": "bbb",
+    "privateKey": "pbbb"
+  },
+  "peers": [],
+  "extField": {}
+}

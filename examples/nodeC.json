@@ -1,0 +1,10 @@
+{
+  "nodeId": "nodeC",
+  "interface": {
+    "publicKey": "ccc",
+    "privateKey": "pccc",
+    "listenPort": 53
+  },
+  "peers": [],
+  "extField": {}
+}
