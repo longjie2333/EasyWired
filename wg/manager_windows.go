@@ -5,6 +5,8 @@ package wg
 import (
 	"errors"
 	"fmt"
+	"golang.zx2c4.com/wireguard/windows/tunnel/winipcfg"
+	"strings"
 	"sync"
 
 	"golang.zx2c4.com/wireguard/windows/driver"
@@ -119,4 +121,52 @@ func (m *adapterManager) activeAdapterName() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.adapterName
+}
+
+func (m *adapterManager) ensureAdapterLocked(name string) (*driver.Adapter, winipcfg.LUID, error) {
+	if err := validateAdapterName(name); err != nil {
+		return nil, 0, err
+	}
+
+	if m.adapter != nil {
+		if strings.EqualFold(m.adapterName, name) {
+			return m.adapter, m.adapter.LUID(), nil
+		}
+		if err := m.closeActiveAdapterLocked(); err != nil {
+			return nil, 0, err
+		}
+	}
+
+	adapter, err := driver.CreateAdapter(name, "WireGuard", nil)
+	if err != nil {
+		return nil, 0, fmt.Errorf("wg: create adapter %q: %w", name, err)
+	}
+
+	m.adapter = adapter
+	m.adapterName = name
+	return adapter, adapter.LUID(), nil
+}
+
+func (m *adapterManager) closeActiveAdapterLocked() error {
+	if m.adapter == nil {
+		return nil
+	}
+
+	adapterName := m.adapterName
+	stateErr := m.adapter.SetAdapterState(driver.AdapterStateDown)
+	closeErr := m.adapter.Close()
+	m.adapter = nil
+	m.adapterName = ""
+
+	if stateErr != nil && closeErr != nil {
+		return fmt.Errorf("wg: set down failed for %q: %v; close failed: %w", adapterName, stateErr, closeErr)
+	}
+	if stateErr != nil {
+		return fmt.Errorf("wg: set down failed for %q: %w", adapterName, stateErr)
+	}
+	if closeErr != nil {
+		return fmt.Errorf("wg: close adapter %q failed: %w", adapterName, closeErr)
+	}
+
+	return nil
 }
