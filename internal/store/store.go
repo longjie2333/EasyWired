@@ -26,13 +26,40 @@ func LoadConfig(path string) (*model.NodeConfig, error) {
 	if err := json.Unmarshal(b, &cfg); err != nil {
 		return nil, err
 	}
-	if _, err := config.EnsureNodeID(&cfg, config.GenerateNodeID); err != nil {
-		return nil, err
-	}
-	if _, err := config.EnsureInterfaceKeys(&cfg); err != nil {
+	if _, err := ensureConfigDefaults(&cfg); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+func LoadOrCreateConfig(path string) (*model.NodeConfig, error) {
+	cfg, err := LoadConfig(path)
+	if err == nil {
+		return cfg, nil
+	}
+	if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	cfg = &model.NodeConfig{Peers: []model.WGPeer{}}
+	if _, err := ensureConfigDefaults(cfg); err != nil {
+		return nil, err
+	}
+	if err := SaveConfig(path, cfg); err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
+
+func ensureConfigDefaults(cfg *model.NodeConfig) (bool, error) {
+	changed, err := config.EnsureNodeID(cfg, config.GenerateNodeID)
+	if err != nil {
+		return false, err
+	}
+	keysChanged, err := config.EnsureInterfaceKeys(cfg)
+	if err != nil {
+		return false, err
+	}
+	return changed || keysChanged, nil
 }
 
 func SaveConfig(path string, cfg *model.NodeConfig) error {
@@ -66,6 +93,14 @@ func SaveConfig(path string, cfg *model.NodeConfig) error {
 
 func Open(path string) (*Store, error) {
 	cfg, err := LoadConfig(path)
+	if err != nil {
+		return nil, err
+	}
+	return &Store{path: path, cfg: cfg}, nil
+}
+
+func OpenOrCreate(path string) (*Store, error) {
+	cfg, err := LoadOrCreateConfig(path)
 	if err != nil {
 		return nil, err
 	}

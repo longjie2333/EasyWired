@@ -134,7 +134,7 @@ func runConnect(opts connectOptions) error {
 	if opts.url == "" {
 		return fmt.Errorf("--url is required")
 	}
-	st, err := store.Open(opts.configPath)
+	st, err := store.OpenOrCreate(opts.configPath)
 	if err != nil {
 		return err
 	}
@@ -237,7 +237,7 @@ func runDisconnect(opts disconnectOptions) error {
 	if opts.url == "" || opts.publicKey == "" {
 		return fmt.Errorf("--url and --public-key are required")
 	}
-	st, err := store.Open(opts.configPath)
+	st, err := store.OpenOrCreate(opts.configPath)
 	if err != nil {
 		return err
 	}
@@ -286,7 +286,7 @@ func runExport(opts exportOptions) error {
 	if opts.output == "" {
 		return fmt.Errorf("--output is required")
 	}
-	cfg, err := store.LoadConfig(opts.configPath)
+	cfg, err := store.LoadOrCreateConfig(opts.configPath)
 	if err != nil {
 		return err
 	}

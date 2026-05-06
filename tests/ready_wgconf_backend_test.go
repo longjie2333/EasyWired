@@ -2,12 +2,15 @@ package tests
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"easywired/internal/backend"
 	"easywired/internal/config"
 	"easywired/internal/model"
+	"easywired/internal/store"
 )
 
 func TestReady(t *testing.T) {
@@ -56,6 +59,24 @@ func TestEnsureInterfaceKeys(t *testing.T) {
 	}
 	if changed || cfg.Interface.PrivateKey != privateKey || cfg.Interface.PublicKey != publicKey {
 		t.Fatalf("expected existing keys to be preserved, changed=%v cfg=%#v", changed, cfg.Interface)
+	}
+}
+
+func TestOpenOrCreateConfigCreatesMissingFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "missing", "config.json")
+	if _, err := store.Open(path); !os.IsNotExist(err) {
+		t.Fatalf("expected Open to fail with not exist, got %v", err)
+	}
+	st, err := store.OpenOrCreate(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := st.Config()
+	if cfg.NodeID == "" || cfg.Interface.PrivateKey == "" || cfg.Interface.PublicKey == "" {
+		t.Fatalf("expected generated config defaults, got %#v", cfg)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatal(err)
 	}
 }
 
