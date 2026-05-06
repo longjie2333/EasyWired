@@ -39,6 +39,26 @@ func TestEnsureNodeID(t *testing.T) {
 	}
 }
 
+func TestEnsureInterfaceKeys(t *testing.T) {
+	cfg := &model.NodeConfig{}
+	changed, err := config.EnsureInterfaceKeys(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !changed || cfg.Interface.PrivateKey == "" || cfg.Interface.PublicKey == "" {
+		t.Fatalf("expected generated private and public keys, changed=%v cfg=%#v", changed, cfg.Interface)
+	}
+	privateKey := cfg.Interface.PrivateKey
+	publicKey := cfg.Interface.PublicKey
+	changed, err = config.EnsureInterfaceKeys(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed || cfg.Interface.PrivateKey != privateKey || cfg.Interface.PublicKey != publicKey {
+		t.Fatalf("expected existing keys to be preserved, changed=%v cfg=%#v", changed, cfg.Interface)
+	}
+}
+
 func TestWGConfigFileExport(t *testing.T) {
 	cfg := &model.NodeConfig{
 		Interface: model.WGInterface{PrivateKey: "priv", Address: "10.0.0.2/32", ListenPort: 51820, MTU: 1420, DNS: []string{"8.8.8.8", "1.1.1.1"}},

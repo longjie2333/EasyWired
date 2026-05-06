@@ -29,6 +29,9 @@ func LoadConfig(path string) (*model.NodeConfig, error) {
 	if _, err := config.EnsureNodeID(&cfg, config.GenerateNodeID); err != nil {
 		return nil, err
 	}
+	if _, err := config.EnsureInterfaceKeys(&cfg); err != nil {
+		return nil, err
+	}
 	return &cfg, nil
 }
 
