@@ -61,17 +61,15 @@ func newServeCommand() *cobra.Command {
 	cmd.Flags().StringVar(&opts.configPath, "config", "./config.json", "config path")
 	cmd.Flags().StringVar(&opts.device, "device", "wg0", "wireguard device")
 	cmd.Flags().StringVar(&opts.listen, "listen", ":8080", "http listen address")
-	cmd.Flags().StringVar(&opts.backendName, "backend", backend.NameAuto, "backend name")
 	cmd.Flags().StringVar(&opts.output, "output", "", "wireguard config output")
 	return cmd
 }
 
 type serveOptions struct {
-	configPath  string
-	device      string
-	listen      string
-	backendName string
-	output      string
+	configPath string
+	device     string
+	listen     string
+	output     string
 }
 
 func runServe(opts serveOptions) error {
@@ -79,7 +77,7 @@ func runServe(opts serveOptions) error {
 	if err != nil {
 		return err
 	}
-	be, err := backend.Select(opts.backendName)
+	be, err := backend.Select("")
 	if err != nil {
 		return err
 	}
@@ -117,17 +115,15 @@ func newConnectCommand() *cobra.Command {
 	cmd.Flags().StringVar(&opts.configPath, "config", "./config.json", "config path")
 	cmd.Flags().StringVar(&opts.device, "device", "wg0", "wireguard device")
 	cmd.Flags().StringVar(&opts.url, "url", "", "connect url")
-	cmd.Flags().StringVar(&opts.backendName, "backend", backend.NameAuto, "backend name")
 	cmd.Flags().StringVar(&opts.output, "output", "", "wireguard config output")
 	return cmd
 }
 
 type connectOptions struct {
-	configPath  string
-	device      string
-	url         string
-	backendName string
-	output      string
+	configPath string
+	device     string
+	url        string
+	output     string
 }
 
 func runConnect(opts connectOptions) error {
@@ -164,12 +160,15 @@ func runConnect(opts connectOptions) error {
 	if err := st.Save(); err != nil {
 		return err
 	}
-	be, err := backend.Select(opts.backendName)
+	be, err := backend.Select("")
 	if err != nil {
 		return err
 	}
 	ctx := context.Background()
 	if be.SupportsNativeApply() {
+		if err := be.EnsureDevice(ctx, opts.device, cfg); err != nil {
+			return err
+		}
 		if err := be.ApplyInterface(ctx, opts.device, cfg.Interface); err != nil {
 			return err
 		}
@@ -219,18 +218,16 @@ func newDisconnectCommand() *cobra.Command {
 	cmd.Flags().StringVar(&opts.device, "device", "wg0", "wireguard device")
 	cmd.Flags().StringVar(&opts.url, "url", "", "disconnect url")
 	cmd.Flags().StringVar(&opts.publicKey, "public-key", "", "peer public key")
-	cmd.Flags().StringVar(&opts.backendName, "backend", backend.NameAuto, "backend name")
 	cmd.Flags().StringVar(&opts.output, "output", "", "wireguard config output")
 	return cmd
 }
 
 type disconnectOptions struct {
-	configPath  string
-	device      string
-	url         string
-	publicKey   string
-	backendName string
-	output      string
+	configPath string
+	device     string
+	url        string
+	publicKey  string
+	output     string
 }
 
 func runDisconnect(opts disconnectOptions) error {
@@ -252,7 +249,7 @@ func runDisconnect(opts disconnectOptions) error {
 	if err := st.Save(); err != nil {
 		return err
 	}
-	be, err := backend.Select(opts.backendName)
+	be, err := backend.Select("")
 	if err != nil {
 		return err
 	}

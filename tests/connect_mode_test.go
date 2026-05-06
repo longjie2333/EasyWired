@@ -124,3 +124,42 @@ func readyNodeA() *model.NodeConfig {
 		},
 	}
 }
+
+type nativeMockBackend struct {
+	ensured bool
+	applied bool
+	peered  bool
+}
+
+func (b *nativeMockBackend) Name() string              { return "native-mock" }
+func (b *nativeMockBackend) Platform() string          { return "test" }
+func (b *nativeMockBackend) SupportsNativeApply() bool { return true }
+func (b *nativeMockBackend) EnsureDevice(context.Context, string, *model.NodeConfig) error {
+	b.ensured = true
+	return nil
+}
+func (b *nativeMockBackend) ApplyInterface(context.Context, string, model.WGInterface) error {
+	b.applied = true
+	return nil
+}
+func (b *nativeMockBackend) AddOrUpdatePeer(context.Context, string, model.WGPeer) error {
+	b.peered = true
+	return nil
+}
+func (b *nativeMockBackend) RemovePeer(context.Context, string, string) error             { return nil }
+func (b *nativeMockBackend) ApplyConfig(context.Context, string, *model.NodeConfig) error { return nil }
+func (b *nativeMockBackend) ExportConfig(context.Context, *model.NodeConfig) ([]byte, error) {
+	return []byte(""), nil
+}
+
+func TestConnectStartsNativeDeviceBeforeApplyingPeer(t *testing.T) {
+	cfg := readyNodeA()
+	st := store.New(filepath.Join(t.TempDir(), "config.json"), cfg)
+	be := &nativeMockBackend{}
+	srv := api.NewServer(api.Options{Store: st, Backend: be, DeviceName: "wg0", ListenAddr: ":8080"})
+	req := model.ConnectRequest{NodeID: "nodeB", Interface: model.WGInterface{PublicKey: "bbb", Address: "10.0.0.2/32"}}
+	_ = postConnect(t, srv.Handler(), req)
+	if !be.ensured || !be.applied || !be.peered {
+		t.Fatalf("expected native device ensure/apply/peer calls, got ensure=%v apply=%v peer=%v", be.ensured, be.applied, be.peered)
+	}
+}

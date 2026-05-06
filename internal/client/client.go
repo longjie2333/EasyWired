@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 
 	"easywired/internal/model"
@@ -22,23 +24,42 @@ func New(timeout time.Duration) *Client {
 	return &Client{http: &http.Client{Timeout: timeout}}
 }
 
-func (c *Client) Connect(url string, req model.ConnectRequest) (*model.ConnectResponse, error) {
+func endpointURL(rawURL, endpoint string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return rawURL
+	}
+	endpoint = "/" + strings.Trim(endpoint, "/")
+	path := strings.TrimRight(u.Path, "/")
+	if path == endpoint || strings.HasSuffix(path, endpoint) {
+		return u.String()
+	}
+	if path == "" {
+		u.Path = endpoint
+	} else {
+		u.Path = path + endpoint
+	}
+	return u.String()
+}
+
+func (c *Client) Connect(rawURL string, req model.ConnectRequest) (*model.ConnectResponse, error) {
 	var resp model.ConnectResponse
-	if err := c.postJSON(url, req, &resp); err != nil {
+	if err := c.postJSON(endpointURL(rawURL, "connect"), req, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
 }
 
-func (c *Client) Disconnect(url string, req model.DisconnectRequest) (*model.DisconnectResponse, error) {
+func (c *Client) Disconnect(rawURL string, req model.DisconnectRequest) (*model.DisconnectResponse, error) {
 	var resp model.DisconnectResponse
-	if err := c.postJSON(url, req, &resp); err != nil {
+	if err := c.postJSON(endpointURL(rawURL, "disconnect"), req, &resp); err != nil {
 		return nil, err
 	}
 	return &resp, nil
 }
 
-func (c *Client) Peers(url string) ([]byte, error) {
+func (c *Client) Peers(rawURL string) ([]byte, error) {
+	url := endpointURL(rawURL, "peers")
 	resp, err := c.http.Get(url)
 	if err != nil {
 		return nil, err

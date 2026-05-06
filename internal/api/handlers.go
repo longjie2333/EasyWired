@@ -154,7 +154,11 @@ func (s *Server) selfPeer(cfg *model.NodeConfig, joinMode bool) model.WGPeer {
 
 func (s *Server) applyAfterChange(ctx context.Context, peer model.WGPeer) error {
 	if s.backend.SupportsNativeApply() {
-		if err := s.backend.ApplyInterface(ctx, s.deviceName, s.store.Config().Interface); err != nil {
+		cfg := s.store.Config()
+		if err := s.backend.EnsureDevice(ctx, s.deviceName, cfg); err != nil {
+			return err
+		}
+		if err := s.backend.ApplyInterface(ctx, s.deviceName, cfg.Interface); err != nil {
 			return err
 		}
 		return s.backend.AddOrUpdatePeer(ctx, s.deviceName, peer)
