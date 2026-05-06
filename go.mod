@@ -3,6 +3,7 @@ module easywired
 go 1.22
 
 require (
+	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/spf13/cobra v1.10.2
 	github.com/vishvananda/netlink v1.3.1
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20241231184526-a9ab2273dd10

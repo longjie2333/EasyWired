@@ -21,6 +21,24 @@ func TestReady(t *testing.T) {
 	}
 }
 
+func TestEnsureNodeID(t *testing.T) {
+	cfg := &model.NodeConfig{}
+	changed, err := config.EnsureNodeID(cfg, func() (string, error) { return "machine-node-id", nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !changed || cfg.NodeID != "machine-node-id" {
+		t.Fatalf("expected generated node id, changed=%v nodeID=%q", changed, cfg.NodeID)
+	}
+	changed, err = config.EnsureNodeID(cfg, func() (string, error) { return "other", nil })
+	if err != nil {
+		t.Fatal(err)
+	}
+	if changed || cfg.NodeID != "machine-node-id" {
+		t.Fatalf("expected existing node id to be preserved, changed=%v nodeID=%q", changed, cfg.NodeID)
+	}
+}
+
 func TestWGConfigFileExport(t *testing.T) {
 	cfg := &model.NodeConfig{
 		Interface: model.WGInterface{PrivateKey: "priv", Address: "10.0.0.2/32", ListenPort: 51820, MTU: 1420, DNS: []string{"8.8.8.8", "1.1.1.1"}},

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"easywired/internal/config"
 	"easywired/internal/model"
 )
 
@@ -23,6 +24,9 @@ func LoadConfig(path string) (*model.NodeConfig, error) {
 	}
 	var cfg model.NodeConfig
 	if err := json.Unmarshal(b, &cfg); err != nil {
+		return nil, err
+	}
+	if _, err := config.EnsureNodeID(&cfg, config.GenerateNodeID); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
