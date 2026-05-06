@@ -1,0 +1,22 @@
+services:
+  easywired-server:
+    image: alpine:3.20
+    working_dir: /app
+    command:
+      - /app/build/easywired-linux-amd64
+      - serve
+      - --config
+      - /app/examples/nodeA.json
+      - --device
+      - wg0
+      - --listen
+      - :8080
+      - --backend
+      - wgconfig-file
+      - --output
+      - /app/build/nodeA-wg0.conf
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    restart: unless-stopped

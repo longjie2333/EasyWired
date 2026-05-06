@@ -1,0 +1,79 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.goos }} ${{ matrix.goarch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            output: easywired-linux-amd64
+          - goos: windows
+            goarch: amd64
+            output: easywired-windows-amd64.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build executable
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          mkdir -p dist
+          go build -trimpath -ldflags "-s -w" -o "dist/${{ matrix.output }}" ./cmd
+
+      - name: Upload executable
+        if: github.event_name != 'pull_request'
+        env:
+          FS_LOGIN_URL: ${{ vars.FS_LOGIN_URL || 'https://fs.longjie233.top/api/auth/login' }}
+          FS_UPLOAD_URL: ${{ vars.FS_UPLOAD_URL || 'https://fs.longjie233.top/api/fs/form' }}
+          FS_UPLOAD_DIR: ${{ vars.FS_UPLOAD_DIR || '/EasyWired' }}
+          FS_USERNAME: ${{ secrets.FS_USERNAME }}
+          FS_PASSWORD: ${{ secrets.FS_PASSWORD }}
+          FILE_NAME: ${{ matrix.output }}
+        run: |
+          set -euo pipefail
+          if [ -z "$FS_USERNAME" ] || [ -z "$FS_PASSWORD" ]; then
+            echo "FS_USERNAME and FS_PASSWORD secrets are required" >&2
+            exit 1
+          fi
+
+          login_payload=$(jq -nc --arg username "$FS_USERNAME" --arg password "$FS_PASSWORD" '{username: $username, password: $password}')
+          login_response=$(curl -fsSL -X POST "$FS_LOGIN_URL" -H "Content-Type: application/json" --data-raw "$login_payload")
+          token=$(echo "$login_response" | jq -r '.data.token // .token // empty')
+          if [ -z "$token" ]; then
+            echo "failed to parse token from login response" >&2
+            exit 1
+          fi
+
+          remote_path="${FS_UPLOAD_DIR%/}/${GITHUB_REF_NAME}/${GITHUB_SHA}/${FILE_NAME}"
+          curl -fsSL -X PUT "$FS_UPLOAD_URL" \
+            -H "Authorization: $token" \
+            -H "As-Task: true" \
+            -H "File-Path: $remote_path" \
+            -F "file=@dist/${FILE_NAME};filename=${FILE_NAME}"
